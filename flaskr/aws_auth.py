@@ -1,28 +1,42 @@
-import functools
-
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
+    Blueprint, redirect, request, jsonify, make_response, url_for
 )
+from flask_jwt_extended import (
+    JWTManager,
+    set_access_cookies
+)
+
+
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from flaskr.db import get_db
 
-from flask_cognito import CognitoAuth
+from flask_awscognito import AWSCognitoAuthentication
 
-cogauth = CognitoAuth()
-
-def init(app):
-    cogauth.init_app(app)
-
-@cogauth.identity_handler
-def lookup_cognito_user(payload):
-    """Look up user in our database from Cognito JWT payload."""
-    print(payload)
-    # return User.query.filter(User.cognito_username == payload['username']).one_or_none()
-
+cogauth = AWSCognitoAuthentication()
+jwt = JWTManager()
 
 bp = Blueprint('aws', __name__, url_prefix='/aws')
 
+def init(app):
+    cogauth.init_app(app)
+    jwt = JWTManager(app)
+
 @bp.route('/login')
-def login():
+def sign_in():
     return redirect(cogauth.get_sign_in_url())
+
+
+@bp.route('/')
+@cogauth.authentication_required
+def index():
+    claims = cogauth.claims  # also available through g.cognito_claims
+    return jsonify({'claims': claims})
+
+
+@bp.route('/authCallback')
+def auth_callback():
+    access_token = cogauth.get_access_token(request.args)
+    resp = make_response(redirect(url_for("blog.index")))
+    set_access_cookies(resp, access_token, max_age=30 * 60)
+    return resp

@@ -3,17 +3,20 @@ from flask import Flask
 
 # moving to https://pypi.org/project/Flask-Cognito/
 
-global cogauth
 
 COGNITO_CONFIG = dict(
-    COGNITO_REGION='ap-northeast-1',
-    COGNITO_DOMAIN='localhost',
-    COGNITO_USERPOOL_ID='ap-northeast-1_Yt2TJKlcN',
-    COGNITO_APP_CLIENT_ID='4j2nh0nonrto9cadeic7m0phjn',
-    # COGNITO_APP_CLIENT_SECRET='1ev8jmho7aacfd91l2ga4a44e5tml9e2emfdncabg2m614ujqhbp',
-    COGNITO_REDIRECT_URL='http://localhost:5000/aws_cognito_redirect',
+    AWS_DEFAULT_REGION='ap-northeast-1',
+    AWS_COGNITO_DOMAIN='https://fortyfeet-flask.auth.ap-northeast-1.amazoncognito.com',
+    AWS_COGNITO_USER_POOL_ID='ap-northeast-1_Yt2TJKlcN',
+    AWS_COGNITO_USER_POOL_CLIENT_ID='4j2nh0nonrto9cadeic7m0phjn',
+    AWS_COGNITO_USER_POOL_CLIENT_SECRET='1ev8jmho7aacfd91l2ga4a44e5tml9e2emfdncabg2m614ujqhbp',
+    AWS_COGNITO_REDIRECT_URL='http://localhost:5000/aws/authCallback',
+    JWT_SECRET_KEY='horspath_2022'
+    # JWT_ACCESS_COOKIE_NAME='access_token_cookie',
+    # JWT_COOKIE_SECURE=False,
+    # JWT_COOKIE_DOMAIN='localhost',
+    # JWT_ACCESS_COOKIE_PATH='/'
 )
-
 
 def create_app(test_config=None):
     global cogauth
