@@ -3,8 +3,9 @@ from flask import (
 )
 from werkzeug.exceptions import abort
 
-from flaskr.auth import login_required
 from flaskr.db import get_db
+
+from .aws_auth import login_required
 
 bp = Blueprint('blog', __name__)
 
@@ -62,6 +63,7 @@ def get_post(id, check_author=True):
 
     return post
 
+
 @bp.route('/<int:id>/update', methods=('GET', 'POST'))
 @login_required
 def update(id):
@@ -88,6 +90,7 @@ def update(id):
             return redirect(url_for('blog.index'))
 
     return render_template('blog/update.html', post=post)
+
 
 @bp.route('/<int:id>/delete', methods=('POST',))
 @login_required

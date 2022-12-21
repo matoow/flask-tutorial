@@ -1,7 +1,9 @@
 import os
 from flask import Flask
-
+from . import logging
 # moving to https://pypi.org/project/Flask-Cognito/
+
+from logging.config import dictConfig
 
 
 COGNITO_CONFIG = dict(
@@ -10,17 +12,19 @@ COGNITO_CONFIG = dict(
     AWS_COGNITO_USER_POOL_ID='ap-northeast-1_Yt2TJKlcN',
     AWS_COGNITO_USER_POOL_CLIENT_ID='4j2nh0nonrto9cadeic7m0phjn',
     AWS_COGNITO_USER_POOL_CLIENT_SECRET='1ev8jmho7aacfd91l2ga4a44e5tml9e2emfdncabg2m614ujqhbp',
-    AWS_COGNITO_REDIRECT_URL='http://localhost:5000/aws/authCallback',
-    JWT_SECRET_KEY='horspath_2022'
-    # JWT_ACCESS_COOKIE_NAME='access_token_cookie',
-    # JWT_COOKIE_SECURE=False,
-    # JWT_COOKIE_DOMAIN='localhost',
-    # JWT_ACCESS_COOKIE_PATH='/'
+    AWS_COGNITO_REDIRECT_URL='http://localhost:5000/auth/callback',
+    JWT_TOKEN_LOCATION=['cookies'],
+    JWT_DECODE_ALGORITHMS=['RS256'],
 )
 
-def create_app(test_config=None):
-    global cogauth
 
+def create_app(test_config=None):
+
+    logging.init(__name__)
+
+    logger = logging.getLogger()
+
+    logger.debug('create_app(): %s', __name__)
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(dict(
@@ -50,8 +54,8 @@ def create_app(test_config=None):
     from . import db
     db.init_app(app)
 
-    from . import auth
-    app.register_blueprint(auth.bp)
+    # from . import auth
+    # app.register_blueprint(auth.bp)
 
     from . import aws_auth
     aws_auth.init(app)
