@@ -11,7 +11,6 @@ from flask import (
     session
 )
 import cognitojwt
-from werkzeug.security import check_password_hash, generate_password_hash
 from flaskr.db import get_db
 from flask_awscognito import AWSCognitoAuthentication
 import boto3
@@ -48,10 +47,9 @@ def login():
 
 @bp.route('/logout')
 def logout():
-    resp = make_response(redirect(url_for("blog.index")))
     session.clear()
-    return resp
-
+    signOutUrl = cogauth.get_sign_in_url().replace('login', 'logout')
+    return redirect(signOutUrl)
 
 @bp.route('/')
 @cogauth.authentication_required

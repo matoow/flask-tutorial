@@ -1,10 +1,6 @@
 import os
 from flask import Flask
 from . import logging
-# moving to https://pypi.org/project/Flask-Cognito/
-
-from logging.config import dictConfig
-
 
 COGNITO_CONFIG = dict(
     AWS_DEFAULT_REGION='ap-northeast-1',
@@ -17,14 +13,13 @@ COGNITO_CONFIG = dict(
     JWT_DECODE_ALGORITHMS=['RS256'],
 )
 
-
 def create_app(test_config=None):
 
     logging.init(__name__)
 
     logger = logging.getLogger()
 
-    logger.debug('create_app(): %s', __name__)
+    logger.debug('create_app: name=%s', __name__)
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(dict(
