@@ -11,18 +11,18 @@ from flask import (
     session
 )
 import cognitojwt
-from flaskr.db import get_db
+from flaskr.db import *
 from flask_awscognito import AWSCognitoAuthentication
 import boto3
 from botocore.config import Config
-from . import logging
+from flaskr.logging import getLogger
 
 
 cogauth = AWSCognitoAuthentication()
 client = None
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
-logger = logging.getLogger('auth')
+logger = getLogger('auth')
 
 
 def init(app):
@@ -50,6 +50,7 @@ def logout():
     session.clear()
     signOutUrl = cogauth.get_sign_in_url().replace('login', 'logout')
     return redirect(signOutUrl)
+
 
 @bp.route('/')
 @cogauth.authentication_required
@@ -90,16 +91,24 @@ def load_logged_in_user():
     if (access_token):
         decoded = decode_token(access_token)
         user_id = decoded['sub']
-        logger.info('user_id: %s', user_id)
-        g.user_id = user_id
+
+        user = get_user(user_id)
+
+        if user == None:
+            register_user(access_token)
+            user = get_user(user_id)
+
+        logger.info('user: %s', user)
+
+        g.user = user
     else:
-        g.user_id = None
+        g.user = None
 
 
 def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
-        if g.user_id is None:
+        if g.user is None:
             return redirect(url_for('auth.login'))
 
         return view(**kwargs)
@@ -107,5 +116,25 @@ def login_required(view):
     return wrapped_view
 
 
+def register_user(token):
+    decoded = decode_token(token)
+    user_id = decoded['sub']
+
+    logger.info('registering user: user_id: %s', user_id)
+    user_details = get_user_details(token)
+
+    logger.info('userDetails: %s', user_details)
+
+    if user_details['email_verified'] != 'true':
+        raise Exception('email not verified')
+
+    username = user_details['email']
+    add_user(user_id, username)
+
+
 def get_user_details(token):
-    return client.get_user(AccessToken=token)
+    res = client.get_user(AccessToken=token)
+
+    attributes = dict([(r['Name'], r['Value']) for r in res['UserAttributes']])
+
+    return attributes

@@ -36,7 +36,7 @@ def test_login(client, auth):
 
     with client:
         client.get('/')
-        assert session['user_id'] == 1
+        assert session['userId'] == 1
         assert g.user['username'] == 'test'
 
 
@@ -54,6 +54,5 @@ def test_logout(client, auth):
 
     with client:
         auth.logout()
-        assert 'user_id' not in session
+        assert 'userId' not in session
 
-  

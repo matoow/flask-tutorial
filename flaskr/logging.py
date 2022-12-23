@@ -42,7 +42,7 @@ class CustomFormatter(logging.Formatter):
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
     # {name} {filename}:{lineno}
-    format = '[{asctime}] {levelname:<8s} {message}'
+    format = '[{asctime}] {levelname:<8s} {name} {message}'
 
     FORMATS = {
         logging.DEBUG: grey + format + reset,
