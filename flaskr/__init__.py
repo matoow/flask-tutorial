@@ -9,6 +9,7 @@ COGNITO_CONFIG = dict(
     AWS_COGNITO_USER_POOL_CLIENT_ID='4j2nh0nonrto9cadeic7m0phjn',
     AWS_COGNITO_USER_POOL_CLIENT_SECRET='1ev8jmho7aacfd91l2ga4a44e5tml9e2emfdncabg2m614ujqhbp',
     AWS_COGNITO_REDIRECT_URL='http://localhost:5000/auth/callback',
+    AWS_COGNITO_SIGN_OUT_URL='http://localhost:5000',
     JWT_TOKEN_LOCATION=['cookies'],
     JWT_DECODE_ALGORITHMS=['RS256'],
 )

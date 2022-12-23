@@ -16,6 +16,7 @@ from flask_awscognito import AWSCognitoAuthentication
 import boto3
 from botocore.config import Config
 from flaskr.logging import getLogger
+from urllib.parse import quote
 
 
 cogauth = AWSCognitoAuthentication()
@@ -28,6 +29,9 @@ logger = getLogger('auth')
 def init(app):
     global client
     global cogauth
+    global sign_out_url
+
+    sign_out_url = app.config.get('AWS_COGNITO_SIGN_OUT_URL')
 
     cogauth.init_app(app)
 
@@ -44,12 +48,24 @@ def init(app):
 def login():
     return redirect(cogauth.get_sign_in_url())
 
+def get_sign_out_url():
+    global sign_out_url
+    quoted_sign_out_url = quote(sign_out_url)
+
+    full_url = (
+        f"{cogauth.domain}/logout"
+        f"?client_id={cogauth.user_pool_client_id}"
+        f"&logout_uri={quoted_sign_out_url}"
+    )
+    return full_url
 
 @bp.route('/logout')
 def logout():
     session.clear()
-    signOutUrl = cogauth.get_sign_in_url().replace('login', 'logout')
-    return redirect(signOutUrl)
+    sign_out_url = get_sign_out_url()
+
+    logger.info('signOutUrl: %s', sign_out_url)
+    return redirect(sign_out_url)
 
 
 @bp.route('/')
