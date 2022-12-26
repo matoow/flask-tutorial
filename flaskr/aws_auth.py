@@ -25,6 +25,9 @@ bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 logger = getLogger('auth')
 
+class EmailNotVerifiedError(Exception):
+    pass
+
 
 def init(app):
     global client
@@ -35,13 +38,17 @@ def init(app):
 
     cogauth.init_app(app)
 
+    #
     # access key ID and secret access key loaded via environment variables
     # or in ~/.aws/credentials
+    #
     aws_config = Config(
         region_name=app.config.get('AWS_DEFAULT_REGION'),
         signature_version='v4',
     )
     client = boto3.client('cognito-idp', config=aws_config)
+
+    app.before_request(before_request)
 
 
 @bp.route('/login')
@@ -82,17 +89,26 @@ def decode_token(id_token):
         id_token,
         app.config.get('AWS_DEFAULT_REGION'),
         app.config.get('AWS_COGNITO_USER_POOL_ID'),
-        app_client_id=app.config.get(
-            'AWS_COGNITO_USER_POOL_CLIENT_ID'),  # Optional
+        app_client_id=app.config.get('AWS_COGNITO_USER_POOL_CLIENT_ID'),
         testmode=True  # Disable token expiration check for testing purposes
     )
 
 
 @bp.route('/callback')
 def auth_callback():
+    logger.info('auth_callback')
+
     access_token = cogauth.get_access_token(request.args)
-    logger.info('cogauth.claims: %s', cogauth.claims)
-    logger.info('access_token: %s', access_token)
+
+    decoded = decode_token(access_token)
+    user_id = decoded['sub']
+    user = get_user(user_id)
+
+    if user == None:
+        register_user(access_token)
+        user = get_user(user_id)
+
+    g.user = user
 
     session['access_token'] = access_token
     resp = make_response(redirect(url_for("blog.index")))
@@ -100,25 +116,27 @@ def auth_callback():
     return resp
 
 
-@bp.before_app_request
-def load_logged_in_user():
-    logger.info('load_logged_in_user: %s', request.base_url)
-    access_token = session.get('access_token')
-    if (access_token):
-        decoded = decode_token(access_token)
-        user_id = decoded['sub']
+def before_request():
+    #
+    # call before each request
+    #
+    logger.info('before_request: %s', request.base_url)
 
-        user = get_user(user_id)
+    if request.base_url != url_for('auth.login'):
+        access_token = session.get('access_token')
 
-        if user == None:
-            register_user(access_token)
+        if (access_token):
+            decoded = decode_token(access_token)
+            user_id = decoded['sub']
+
             user = get_user(user_id)
 
-        logger.info('user: %s', user)
+            if user == None:
+                logger.info('user not found: %s', user_id)
 
-        g.user = user
-    else:
-        g.user = None
+            g.user = user
+        else:
+            g.user = None
 
 
 def login_required(view):
@@ -142,7 +160,11 @@ def register_user(token):
     logger.info('userDetails: %s', user_details)
 
     if user_details['email_verified'] != 'true':
-        raise Exception('email not verified')
+        #
+        # this shouldn't be happening, as only verified users should be let
+        # past the cognito login
+        #
+        raise EmailNotVerifiedError()
 
     username = user_details['email']
     add_user(user_id, username)
