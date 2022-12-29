@@ -2,6 +2,8 @@
 import logging
 import sys
 
+global APP_NAME
+APP_NAME = None
 
 def init(name):
     global APP_NAME
@@ -27,12 +29,9 @@ def init(name):
 def getLogger(name=None):
     global APP_NAME
 
-    if name:
-        log = APP_NAME + '.' + name
-    else:
-        log = APP_NAME
-    return logging.getLogger(log)
+    log_names = filter(lambda x: x != None, [APP_NAME, name])
 
+    return logging.getLogger('.'.join(log_names))
 
 class CustomFormatter(logging.Formatter):
 

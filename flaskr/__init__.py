@@ -12,6 +12,9 @@ COGNITO_CONFIG = dict(
     AWS_COGNITO_SIGN_OUT_URL='http://localhost:5000',
     JWT_TOKEN_LOCATION=['cookies'],
     JWT_DECODE_ALGORITHMS=['RS256'],
+
+    PG_AWS_SECRET='dev/flaskr',
+    PG_AWS_REGION='ap-southeast-2',
 )
 
 def create_app(test_config=None):
@@ -47,7 +50,7 @@ def create_app(test_config=None):
     # def hello():
     #     return 'Hello, World!'
 
-    from . import db
+    from . import postgres_db as db
     db.init_app(app)
 
     # from . import auth

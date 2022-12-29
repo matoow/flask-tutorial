@@ -2,18 +2,43 @@ import sqlite3
 
 import click
 from flask import current_app, g
-from . import logging
+from flaskr import logging
+
+from psycopg import Connection
+from flaskr.aws_secret import get_secret
 
 logger = logging.getLogger('db')
+
+global PG_CONNECT_STRING
+
+
+def init_app(app):
+    global PG_CONNECT_STRING
+    PG_CONNECT_STRING = get_connect_string(app.config)
+    logger.info('PG_CONNECT_STRING: %s', PG_CONNECT_STRING)
+
+    app.teardown_appcontext(close_db)
+    app.cli.add_command(init_db_command)
+
+
+def get_connect_string(config):
+    secret = get_secret(
+        config.get('PG_AWS_SECRET'),
+        config.get('PG_AWS_REGION')
+    )
+
+    return 'postgresql://{user}@{host}/{db}?password={password}'.format(
+        user=secret['username'],
+        host=secret['host'],
+        db=secret['dbInstanceIdentifier'],
+        password=secret['password']
+    )
 
 
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(
-            current_app.config['DATABASE'],
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
-        g.db.row_factory = sqlite3.Row
+        # postgresql://[userspec@][hostspec][/dbname][?paramspec]
+        g.db = Connection(PG_CONNECT_STRING)
 
     return g.db
 
@@ -32,7 +57,7 @@ def init_db():
         db.executescript(f.read().decode('utf8'))
 
 
-@click.command('init-db')
+@ click.command('init-db')
 def init_db_command():
     """Clear the existing data and create new tables."""
     init_db()
@@ -64,8 +89,3 @@ def add_user(user_id, username):
             "User is already registered: user_id: %s, username: %s",
             user_id, username)
         raise
-
-
-def init_app(app):
-    app.teardown_appcontext(close_db)
-    app.cli.add_command(init_db_command)
