@@ -1,6 +1,6 @@
 import os
 from flask import Flask
-from . import logging
+from flaskr import logging
 
 COGNITO_CONFIG = dict(
     AWS_DEFAULT_REGION='ap-northeast-1',

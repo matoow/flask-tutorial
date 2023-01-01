@@ -11,8 +11,9 @@ from flask import (
     session
 )
 import cognitojwt
-from flaskr.db import *
+import flaskr.postgres_db as db
 from flask_awscognito import AWSCognitoAuthentication
+from flask_awscognito.exceptions import FlaskAWSCognitoError
 import boto3
 from botocore.config import Config
 from flaskr.logging import getLogger
@@ -96,21 +97,30 @@ def decode_token(id_token):
 
 @bp.route('/callback')
 def auth_callback():
-    logger.info('auth_callback')
+    logger.info('auth_callback code=%s', request.args.get('code'))
 
-    access_token = cogauth.get_access_token(request.args)
+    try:
+        access_token = cogauth.get_access_token(request.args)
 
-    decoded = decode_token(access_token)
-    user_id = decoded['sub']
-    user = get_user(user_id)
+        decoded = decode_token(access_token)
+        user_id = decoded['sub']
+        user = db.get_user(user_id)
 
-    if user == None:
-        register_user(access_token)
-        user = get_user(user_id)
+        if user == None:
+            register_user(access_token)
+            user = db.get_user(user_id)
 
-    g.user = user
+        g.user = user
 
-    session['access_token'] = access_token
+        session['access_token'] = access_token
+
+    except FlaskAWSCognitoError as e:
+        logger.error('TODO: this is an error that should be handled gracefully')
+        logger.error('failed to get access token: %s', e)
+
+        g.user = None
+        session['access_token'] = None
+
     resp = make_response(redirect(url_for("blog.index")))
 
     return resp
@@ -129,7 +139,7 @@ def before_request():
             decoded = decode_token(access_token)
             user_id = decoded['sub']
 
-            user = get_user(user_id)
+            user = db.get_user(user_id)
 
             if user == None:
                 logger.info('user not found: %s', user_id)
@@ -155,7 +165,7 @@ def register_user(token):
     user_id = decoded['sub']
 
     logger.info('registering user: user_id: %s', user_id)
-    user_details = get_user_details(token)
+    user_details = get_user_attrs_from_cognito(token)
 
     logger.info('userDetails: %s', user_details)
 
@@ -167,10 +177,10 @@ def register_user(token):
         raise EmailNotVerifiedError()
 
     username = user_details['email']
-    add_user(user_id, username)
+    db.add_user(user_id, username)
 
 
-def get_user_details(token):
+def get_user_attrs_from_cognito(token):
     res = client.get_user(AccessToken=token)
 
     attributes = dict([(r['Name'], r['Value']) for r in res['UserAttributes']])
